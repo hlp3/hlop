@@ -18,15 +18,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isAdmin() && isset($_POST['role'])) {
         $role = intval($_POST['role']);
     } else {
-        $role = 1;
+        $role = 1; 
     }
     
     if (empty($full_name) || empty($login) || empty($password)) {
         $error = 'Все поля обязательны для заполнения';
     } elseif ($password !== $confirm_password) {
         $error = 'Пароли не совпадают';
-    } elseif (strlen($password) < 6) {
-        $error = 'Пароль должен быть не менее 6 символов';
+    } elseif (strlen($password) < 3) {
+        $error = 'Пароль должен быть не менее 3 символов';
     } else {
         $stmt = $pdo->prepare("SELECT Account_ID FROM Account WHERE Login = ?");
         $stmt->execute([$login]);
@@ -34,8 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->fetch()) {
             $error = 'Пользователь с таким логином уже существует';
         } else {
+            $hashed_password = hashPassword($password);
+            
             $stmt = $pdo->prepare("INSERT INTO Account (Full_name, Login, Password, Account_role) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$full_name, $login, $password, $role]);
+            $stmt->execute([$full_name, $login, $hashed_password, $role]);
             
             $success = 'Регистрация успешна!';
             

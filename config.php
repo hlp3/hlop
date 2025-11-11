@@ -29,4 +29,23 @@ function checkAuth() {
         exit();
     }
 }
+
+function getBucketItemCount($pdo, $user_id) {
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) as total 
+        FROM Purchase_products 
+        WHERE Account_ID = ? AND Bucket_ID = 0
+    ");
+    $stmt->execute([$user_id]);
+    $result = $stmt->fetch();
+    return $result['total'] ?: 0;
+}
+
+function hashPassword($password) {
+    return password_hash($password, PASSWORD_DEFAULT);
+}
+
+function verifyPassword($password, $hash) {
+    return password_verify($password, $hash);
+}
 ?>

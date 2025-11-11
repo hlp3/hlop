@@ -15,19 +15,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $new_password = $_POST['new_password'];
     $confirm_password = $_POST['confirm_password'];
     
-    // Валидация
     if (empty($full_name)) {
         $error = 'ФИО не может быть пустым';
-    } elseif (!empty($new_password) && strlen($new_password) < 6) {
-        $error = 'Новый пароль должен быть не менее 6 символов';
+    } elseif (!empty($new_password) && strlen($new_password) < 3) {
+        $error = 'Новый пароль должен быть не менее 3 символов';
     } elseif (!empty($new_password) && $new_password !== $confirm_password) {
         $error = 'Новые пароли не совпадают';
-    } elseif (!empty($new_password) && $user['Password'] !== $current_password) {
+    } elseif (!empty($new_password) && !verifyPassword($current_password, $user['Password'])) {
         $error = 'Текущий пароль неверен';
     } else {
         if (!empty($new_password)) {
+            $hashed_password = hashPassword($new_password);
+            
             $stmt = $pdo->prepare("UPDATE Account SET Full_name = ?, Password = ? WHERE Account_ID = ?");
-            $stmt->execute([$full_name, $new_password, $_SESSION['user_id']]);
+            $stmt->execute([$full_name, $hashed_password, $_SESSION['user_id']]);
             $success = 'Профиль и пароль успешно обновлены!';
         } else {
             $stmt = $pdo->prepare("UPDATE Account SET Full_name = ? WHERE Account_ID = ?");
