@@ -179,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group">
                     <label for="password">Пароль:</label>
                     <input type="password" id="password" name="password" 
-                           placeholder="Пароль (не менее 6 символов)" required>
+                           placeholder="Пароль (не менее 3 символов)" required>
                 </div>
                 
                 <div class="form-group">

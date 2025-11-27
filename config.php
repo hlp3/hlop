@@ -30,6 +30,13 @@ function checkAuth() {
     }
 }
 
+function getNewPurchaseId($pdo) {
+    $stmt = $pdo->query("SELECT MAX(ID) as max_id FROM Purchase_products");
+    $result = $stmt->fetch();
+    $new_id = ($result['max_id'] ?? 0) + 1;
+    return $new_id;
+}
+
 function getBucketItemCount($pdo, $user_id) {
     $stmt = $pdo->prepare("
         SELECT COUNT(*) as total 

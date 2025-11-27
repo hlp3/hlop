@@ -19,14 +19,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$login]);
         $user = $stmt->fetch();
         
-        if ($user && verifyPassword($password, $user['Password'])) {
-            $_SESSION['user_id'] = $user['Account_ID'];
-            $_SESSION['user_name'] = $user['Full_name'];
-            $_SESSION['user_role'] = $user['Account_role'];
-            $_SESSION['user_login'] = $user['Login'];
+        if ($user) {
+            $login_success = false;
             
-            header('Location: index.php');
-            exit();
+            if (password_verify($password, $user['Password'])) {
+                $login_success = true;
+            } 
+            else if ($user['Password'] === $password) {
+                $login_success = true;
+                
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("UPDATE Account SET Password = ? WHERE Account_ID = ?");
+                $stmt->execute([$hashed_password, $user['Account_ID']]);
+            }
+            
+            if ($login_success) {
+                $_SESSION['user_id'] = $user['Account_ID'];
+                $_SESSION['user_name'] = $user['Full_name'];
+                $_SESSION['user_role'] = $user['Account_role'];
+                $_SESSION['user_login'] = $user['Login'];
+                
+                header('Location: index.php');
+                exit();
+            } else {
+                $error = 'Неверный логин или пароль';
+            }
         } else {
             $error = 'Неверный логин или пароль';
         }
@@ -39,9 +56,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <title>Авторизация</title>
     <style>
-        .container { max-width: 400px; margin: 50px auto; padding: 20px; }
-        .error { color: red; margin-bottom: 10px; }
-        input, button { width: 100%; padding: 10px; margin: 5px 0; }
+        .container { 
+            max-width: 400px; 
+            margin: 50px auto; 
+            padding: 30px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .error { 
+            color: red; 
+            margin-bottom: 15px; 
+            padding: 10px;
+            background-color: #ffe6e6;
+            border: 1px solid #ffcccc;
+            border-radius: 4px;
+        }
+        
+        input, button { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 8px 0; 
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button { 
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -58,7 +107,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="password" name="password" placeholder="Пароль" required>
             <button type="submit">Войти</button>
         </form>
-        <p>Нет аккаунта? <a href="register.php">Зарегистрируйтесь</a></p>
+        <p style="text-align: center; margin-top: 15px;">
+            Нет аккаунта? <a href="register.php">Зарегистрируйтесь</a>
+        </p>
     </div>
 </body>
 </html>
