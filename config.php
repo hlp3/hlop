@@ -19,10 +19,12 @@ try {
     die('Подключение не удалось: ' . $e->getMessage());
 }
 
+// Функция проверки прав администратора
 function isAdmin() {
     return isset($_SESSION['user_role']) && $_SESSION['user_role'] == 2;
 }
 
+// Функция проверки авторизации
 function checkAuth() {
     if (!isset($_SESSION['user_id'])) {
         header('Location: login.php');
@@ -30,13 +32,7 @@ function checkAuth() {
     }
 }
 
-function getNewPurchaseId($pdo) {
-    $stmt = $pdo->query("SELECT MAX(ID) as max_id FROM Purchase_products");
-    $result = $stmt->fetch();
-    $new_id = ($result['max_id'] ?? 0) + 1;
-    return $new_id;
-}
-
+// Функция получения количества товаров в корзине
 function getBucketItemCount($pdo, $user_id) {
     $stmt = $pdo->prepare("
         SELECT COUNT(*) as total 
@@ -48,11 +44,21 @@ function getBucketItemCount($pdo, $user_id) {
     return $result['total'] ?: 0;
 }
 
+// Функция для хеширования пароля
 function hashPassword($password) {
     return password_hash($password, PASSWORD_DEFAULT);
 }
 
+// Функция для проверки пароля
 function verifyPassword($password, $hash) {
     return password_verify($password, $hash);
+}
+
+// Функция для генерации нового ID для Purchase_products
+function getNewPurchaseId($pdo) {
+    $stmt = $pdo->query("SELECT MAX(ID) as max_id FROM Purchase_products");
+    $result = $stmt->fetch();
+    $new_id = ($result['max_id'] ?? 0) + 1;
+    return $new_id;
 }
 ?>
