@@ -61,4 +61,18 @@ function getNewPurchaseId($pdo) {
     $new_id = ($result['max_id'] ?? 0) + 1;
     return $new_id;
 }
+
+// Функция для получения информации о корзине пользователя
+function getUserBucketInfo($pdo, $user_id) {
+    $stmt = $pdo->prepare("
+        SELECT 
+            COUNT(*) as item_count,
+            SUM(p.Price) as total_price
+        FROM Purchase_products pp 
+        JOIN Products p ON pp.Product_ID = p.Product_ID 
+        WHERE pp.Account_ID = ? AND pp.Bucket_ID = 0
+    ");
+    $stmt->execute([$user_id]);
+    return $stmt->fetch();
+}
 ?>

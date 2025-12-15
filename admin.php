@@ -74,6 +74,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = 'Ошибка при удалении пользователя: ' . $e->getMessage();
             }
             break;
+            
+        case 'clear_user_bucket':
+            $user_id = intval($_POST['user_id']);
+            
+            // Проверяем, существует ли пользователь
+            $stmt = $pdo->prepare("SELECT * FROM Account WHERE Account_ID = ?");
+            $stmt->execute([$user_id]);
+            $user = $stmt->fetch();
+            
+            if (!$user) {
+                $message = 'Ошибка: Пользователь не найден!';
+                break;
+            }
+            
+            try {
+                // Удаляем корзину пользователя (только записи с Bucket_ID = 0)
+                $stmt = $pdo->prepare("DELETE FROM Purchase_products WHERE Account_ID = ? AND Bucket_ID = 0");
+                $deleted_count = $stmt->execute([$user_id]);
+                
+                if ($stmt->rowCount() > 0) {
+                    $message = 'Корзина пользователя успешно очищена! Удалено ' . $stmt->rowCount() . ' товаров.';
+                } else {
+                    $message = 'Корзина пользователя уже пуста.';
+                }
+            } catch (PDOException $e) {
+                $message = 'Ошибка при очистке корзины: ' . $e->getMessage();
+            }
+            break;
+            
+        case 'clear_all_buckets':
+            try {
+                // Очищаем корзины всех пользователей
+                $stmt = $pdo->prepare("DELETE FROM Purchase_products WHERE Bucket_ID = 0");
+                $stmt->execute();
+                
+                $message = 'Все корзины успешно очищены! Удалено ' . $stmt->rowCount() . ' товаров.';
+            } catch (PDOException $e) {
+                $message = 'Ошибка при очистке всех корзин: ' . $e->getMessage();
+            }
+            break;
     }
 }
 
@@ -92,7 +132,7 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
 <head>
     <title>Админ-панель</title>
     <style>
-        .container { max-width: 1200px; margin: 20px auto; padding: 20px; }
+        .container { max-width: 1300px; margin: 20px auto; padding: 20px; }
         .menu { margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 5px; }
         .menu a { margin-right: 15px; text-decoration: none; color: #007bff; }
         .bucket-count { background: #007bff; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
@@ -105,6 +145,8 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
         form { margin: 10px 0; }
         input, select, button { padding: 5px; margin: 2px; }
         .delete-user-btn { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        .clear-bucket-btn { background: #ffc107; color: black; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        .clear-bucket-btn:hover { background: #e0a800; }
         .delete-user-btn:hover { background: #c82333; }
         .role-form { display: inline; }
         .user-actions { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -112,6 +154,11 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
         .stats { display: flex; gap: 20px; margin-top: 20px; }
         .stat-box { padding: 15px; background: #f8f9fa; border-radius: 5px; flex: 1; text-align: center; }
         .stat-number { font-size: 1.5em; font-weight: bold; color: #007bff; }
+        .bucket-info { font-size: 0.9em; color: #666; }
+        .global-actions { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+        .global-actions h3 { margin-top: 0; }
+        .clear-all-btn { background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        .clear-all-btn:hover { background: #c82333; }
     </style>
 </head>
 <body>
@@ -130,7 +177,7 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
             <div class="message"><?= $message ?></div>
         <?php endif; ?>
 
-        <!-- Статистика -->
+        <!-- Статистика системы -->
         <div class="section">
             <h2>Статистика системы</h2>
             <div class="stats">
@@ -167,11 +214,22 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
                         <th>ФИО</th>
                         <th>Логин</th>
                         <th>Роль</th>
+                        <th>Корзина</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($users as $user): ?>
+                    <?php foreach ($users as $user): 
+                        // Получаем информацию о корзине пользователя
+                        $stmt = $pdo->prepare("
+                            SELECT COUNT(*) as count 
+                            FROM Purchase_products 
+                            WHERE Account_ID = ? AND Bucket_ID = 0
+                        ");
+                        $stmt->execute([$user['Account_ID']]);
+                        $bucket_info = $stmt->fetch();
+                        $bucket_items = $bucket_info['count'];
+                    ?>
                     <tr class="<?= $user['Account_ID'] == $_SESSION['user_id'] ? 'current-user' : '' ?>">
                         <td><?= $user['Account_ID'] ?></td>
                         <td><?= htmlspecialchars($user['Full_name']) ?></td>
@@ -186,9 +244,27 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
                                 <input type="hidden" name="action" value="update_user_role">
                             </form>
                         </td>
+                        <td class="bucket-info">
+                            <?php if ($bucket_items > 0): ?>
+                                <span style="color: #28a745;">●</span> <?= $bucket_items ?> товаров
+                            <?php else: ?>
+                                <span style="color: #6c757d;">●</span> Пусто
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <div class="user-actions">
                                 <?php if ($user['Account_ID'] != $_SESSION['user_id']): ?>
+                                    <?php if ($bucket_items > 0): ?>
+                                        <form method="post" style="display: inline;">
+                                            <input type="hidden" name="user_id" value="<?= $user['Account_ID'] ?>">
+                                            <button type="submit" name="action" value="clear_user_bucket" 
+                                                    class="clear-bucket-btn"
+                                                    onclick="return confirm('Очистить корзину пользователя <?= htmlspecialchars($user['Full_name']) ?>? Будут удалены все товары в корзине.')">
+                                                Очистить корзину
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                    
                                     <form method="post" style="display: inline;">
                                         <input type="hidden" name="user_id" value="<?= $user['Account_ID'] ?>">
                                         <button type="submit" name="action" value="delete_user" 
@@ -206,6 +282,17 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Глобальные действия -->
+        <div class="global-actions">
+            <h3>Глобальные действия</h3>
+            <form method="post" onsubmit="return confirm('Вы уверены, что хотите очистить корзины ВСЕХ пользователей? Это действие нельзя отменить.')">
+                <button type="submit" name="action" value="clear_all_buckets" class="clear-all-btn">
+                    Очистить все корзины
+                </button>
+                <small style="margin-left: 10px; color: #666;">Удаляет все товары из корзин всех пользователей</small>
+            </form>
         </div>
 
         <!-- Управление товарами -->
