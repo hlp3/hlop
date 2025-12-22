@@ -36,10 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hashed_password = hashPassword($password);
             
+
             $stmt = $pdo->prepare("INSERT INTO Account (Full_name, Login, Password, Account_role) VALUES (?, ?, ?, ?)");
             $stmt->execute([$full_name, $login, $hashed_password, $role]);
             
             $success = 'Регистрация успешна!';
+
             
             if (isAdmin()) {
                 $success .= ' <a href="admin.php">Вернуться в админ-панель</a>';

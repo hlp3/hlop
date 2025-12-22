@@ -5,12 +5,10 @@ checkAuth();
 $error = '';
 $success = '';
 
-// Получаем текущие данные пользователя
 $stmt = $pdo->prepare("SELECT * FROM Account WHERE Account_ID = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch();
 
-// Обработка удаления товара из корзины
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_item'])) {
     $item_id = intval($_POST['item_id']);
     $stmt = $pdo->prepare("DELETE FROM Purchase_products WHERE ID = ? AND Account_ID = ?");
@@ -18,21 +16,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_item'])) {
     $success = 'Товар удален из корзины';
 }
 
-// Обработка очистки всей корзины
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_bucket'])) {
     $stmt = $pdo->prepare("DELETE FROM Purchase_products WHERE Account_ID = ? AND Bucket_ID = 0");
     $stmt->execute([$_SESSION['user_id']]);
     $success = 'Корзина очищена';
 }
 
-// Обработка изменения профиля
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $full_name = trim($_POST['full_name']);
     $current_password = $_POST['current_password'];
     $new_password = $_POST['new_password'];
     $confirm_password = $_POST['confirm_password'];
     
-    // Валидация
     if (empty($full_name)) {
         $error = 'ФИО не может быть пустым';
     } elseif (!empty($new_password) && strlen($new_password) < 6) {
@@ -42,31 +37,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     } elseif (!empty($new_password) && !verifyPassword($current_password, $user['Password'])) {
         $error = 'Текущий пароль неверен';
     } else {
-        // Обновляем данные
         if (!empty($new_password)) {
-            // Хешируем новый пароль
             $hashed_password = hashPassword($new_password);
             
-            // Обновляем ФИО и пароль
             $stmt = $pdo->prepare("UPDATE Account SET Full_name = ?, Password = ? WHERE Account_ID = ?");
             $stmt->execute([$full_name, $hashed_password, $_SESSION['user_id']]);
             $success = 'Профиль и пароль успешно обновлены!';
         } else {
-            // Обновляем только ФИО
             $stmt = $pdo->prepare("UPDATE Account SET Full_name = ? WHERE Account_ID = ?");
             $stmt->execute([$full_name, $_SESSION['user_id']]);
             $success = 'Профиль успешно обновлен!';
         }
         
-        // Обновляем данные в сессии
         $_SESSION['user_name'] = $full_name;
         
-        // Обновляем данные пользователя
         $user['Full_name'] = $full_name;
     }
 }
 
-// Получаем товары в корзине пользователя
 $stmt = $pdo->prepare("
     SELECT pp.ID as item_id, pp.Product_ID, p.Name, p.Price, p.Amount 
     FROM Purchase_products pp 
@@ -76,13 +64,11 @@ $stmt = $pdo->prepare("
 $stmt->execute([$_SESSION['user_id']]);
 $bucket_items = $stmt->fetchAll();
 
-// Подсчет общей суммы корзины
 $total_amount = 0;
 foreach ($bucket_items as $item) {
     $total_amount += $item['Price'];
 }
 
-// Получаем количество товаров в корзине для меню
 $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
 ?>
 
@@ -260,7 +246,6 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Переключение между вкладками
             const tabs = document.querySelectorAll('.tab');
             const tabContents = document.querySelectorAll('.tab-content');
             
@@ -268,17 +253,14 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
                 tab.addEventListener('click', function() {
                     const tabId = this.getAttribute('data-tab');
                     
-                    // Убираем активный класс у всех вкладок
                     tabs.forEach(t => t.classList.remove('active'));
                     tabContents.forEach(tc => tc.classList.remove('active'));
                     
-                    // Добавляем активный класс текущей вкладке
                     this.classList.add('active');
                     document.getElementById(tabId).classList.add('active');
                 });
             });
             
-            // Подтверждение очистки корзины
             const clearBtn = document.querySelector('.btn-warning');
             if (clearBtn) {
                 clearBtn.addEventListener('click', function(e) {
@@ -288,7 +270,6 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
                 });
             }
             
-            // Подтверждение удаления товара
             const deleteBtns = document.querySelectorAll('.btn-danger');
             deleteBtns.forEach(btn => {
                 btn.addEventListener('click', function(e) {
@@ -326,7 +307,6 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
             <div class="success"><?= $success ?></div>
         <?php endif; ?>
 
-        <!-- Вкладка профиля -->
         <div id="profile" class="tab-content active">
             <div class="profile-section">
                 <h2 class="section-title">Редактирование профиля</h2>
@@ -365,7 +345,6 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
             </div>
         </div>
 
-        <!-- Вкладка корзины -->
         <div id="bucket" class="tab-content">
             <div class="bucket-section">
                 <h2 class="section-title">Моя корзина</h2>

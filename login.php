@@ -1,7 +1,6 @@
 <?php
 require 'config.php';
 
-// Если пользователь уже авторизован, перенаправляем на главную
 if (isset($_SESSION['user_id'])) {
     header('Location: index.php');
     exit();
@@ -23,15 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user) {
             $login_success = false;
             
-            // Пытаемся проверить пароль как хешированный
             if (password_verify($password, $user['Password'])) {
                 $login_success = true;
             } 
-            // Если не сработало, проверяем как незахешированный пароль
             else if ($user['Password'] === $password) {
                 $login_success = true;
                 
-                // Обновляем пароль на хешированный версию
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 $stmt = $pdo->prepare("UPDATE Account SET Password = ? WHERE Account_ID = ?");
                 $stmt->execute([$hashed_password, $user['Account_ID']]);
@@ -107,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="post">
             <input type="text" name="login" placeholder="Логин" 
                    value="<?= htmlspecialchars($_POST['login'] ?? '') ?>" required>
-            <input type="password" name="password" placeholder="Пароль" required>
+            <input type="password" id="password" name="password" placeholder="Пароль (не менее 3 символов)" required>
             <button type="submit">Войти</button>
         </form>
         <p style="text-align: center; margin-top: 15px;">

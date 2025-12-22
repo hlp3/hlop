@@ -2,7 +2,6 @@
 require 'config.php';
 checkAuth();
 
-// Проверка прав администратора
 if (!isAdmin()) {
     header('Location: index.php');
     exit();
@@ -11,7 +10,6 @@ if (!isAdmin()) {
 $action = $_GET['action'] ?? '';
 $message = '';
 
-// Обработка действий администратора
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     switch ($_POST['action']) {
         case 'add_product':
@@ -43,14 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
         case 'delete_user':
             $user_id = intval($_POST['user_id']);
-            
-            // Проверяем, не пытаемся ли удалить самого себя
+
             if ($user_id == $_SESSION['user_id']) {
                 $message = 'Ошибка: Нельзя удалить свой собственный аккаунт!';
                 break;
             }
-            
-            // Проверяем, существует ли пользователь
+
             $stmt = $pdo->prepare("SELECT * FROM Account WHERE Account_ID = ?");
             $stmt->execute([$user_id]);
             $user = $stmt->fetch();
@@ -61,11 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             try {
-                // Сначала удаляем связанные записи в Purchase_products
+
                 $stmt = $pdo->prepare("DELETE FROM Purchase_products WHERE Account_ID = ?");
                 $stmt->execute([$user_id]);
                 
-                // Затем удаляем самого пользователя
+
                 $stmt = $pdo->prepare("DELETE FROM Account WHERE Account_ID = ?");
                 $stmt->execute([$user_id]);
                 
@@ -77,8 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
         case 'clear_user_bucket':
             $user_id = intval($_POST['user_id']);
-            
-            // Проверяем, существует ли пользователь
+
             $stmt = $pdo->prepare("SELECT * FROM Account WHERE Account_ID = ?");
             $stmt->execute([$user_id]);
             $user = $stmt->fetch();
@@ -89,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             try {
-                // Удаляем корзину пользователя (только записи с Bucket_ID = 0)
+
                 $stmt = $pdo->prepare("DELETE FROM Purchase_products WHERE Account_ID = ? AND Bucket_ID = 0");
                 $deleted_count = $stmt->execute([$user_id]);
                 
@@ -105,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
         case 'clear_all_buckets':
             try {
-                // Очищаем корзины всех пользователей
+
                 $stmt = $pdo->prepare("DELETE FROM Purchase_products WHERE Bucket_ID = 0");
                 $stmt->execute();
                 
@@ -117,13 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Получаем список пользователей
+
 $users = $pdo->query("SELECT * FROM Account ORDER BY Account_ID")->fetchAll();
 
-// Получаем список товаров
 $products = $pdo->query("SELECT * FROM Products ORDER BY Product_ID")->fetchAll();
 
-// Получаем количество товаров в корзине для меню
+
 $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
 ?>
 
@@ -177,7 +171,6 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
             <div class="message"><?= $message ?></div>
         <?php endif; ?>
 
-        <!-- Статистика системы -->
         <div class="section">
             <h2>Статистика системы</h2>
             <div class="stats">
@@ -202,7 +195,6 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
             </div>
         </div>
 
-        <!-- Управление пользователями -->
         <div class="section">
             <h2>Управление пользователями</h2>
             <p><a href="register.php">Добавить нового пользователя</a></p>
@@ -220,7 +212,7 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
                 </thead>
                 <tbody>
                     <?php foreach ($users as $user): 
-                        // Получаем информацию о корзине пользователя
+
                         $stmt = $pdo->prepare("
                             SELECT COUNT(*) as count 
                             FROM Purchase_products 
@@ -284,7 +276,6 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
             </table>
         </div>
 
-        <!-- Глобальные действия -->
         <div class="global-actions">
             <h3>Глобальные действия</h3>
             <form method="post" onsubmit="return confirm('Вы уверены, что хотите очистить корзины ВСЕХ пользователей? Это действие нельзя отменить.')">
@@ -295,7 +286,6 @@ $bucket_count = getBucketItemCount($pdo, $_SESSION['user_id']);
             </form>
         </div>
 
-        <!-- Управление товарами -->
         <div class="section">
             <h2>Управление товарами</h2>
             
