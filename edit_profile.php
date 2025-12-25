@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     
     if (empty($full_name)) {
         $error = 'ФИО не может быть пустым';
-    } elseif (!empty($new_password) && strlen($new_password) < 6) {
-        $error = 'Новый пароль должен быть не менее 6 символов';
+    } elseif (!empty($new_password) && strlen($new_password) < 3) {
+        $error = 'Новый пароль должен быть не менее 3 символов';
     } elseif (!empty($new_password) && $new_password !== $confirm_password) {
         $error = 'Новые пароли не совпадают';
     } elseif (!empty($new_password) && !verifyPassword($current_password, $user['Password'])) {
